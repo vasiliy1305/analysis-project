@@ -453,59 +453,43 @@ where
                     .2
                     .parse(remaining)
                     .map(|(remaining, a2)| (remaining, (a0, a1, a2))),
-                Err(()) => self
-                    .parsers
-                    .2
-                    .parse(remaining)
-                    .and_then(|(remaining, a2)| {
-                        self.parsers
-                            .1
-                            .parse(remaining)
-                            .map(|(remaining, a1)| (remaining, (a0, a1, a2)))
-                    }),
+                Err(()) => self.parsers.2.parse(remaining).and_then(|(remaining, a2)| {
+                    self.parsers
+                        .1
+                        .parse(remaining)
+                        .map(|(remaining, a1)| (remaining, (a0, a1, a2)))
+                }),
             },
-            Err(()) => {
-                match self.parsers.1.parse(input) {
-                    Ok((remaining, a1)) => {
-                        match self.parsers.0.parse(remaining) {
-                            Ok((remaining, a0)) => self
-                                .parsers
-                                .2
-                                .parse(remaining)
-                                .map(|(remaining, a2)| (remaining, (a0, a1, a2))),
-                            Err(()) => self.parsers.2.parse(remaining).and_then(
-                                |(remaining, a2)| {
-                                    self.parsers
-                                        .0
-                                        .parse(remaining)
-                                        .map(|(remaining, a0)| (remaining, (a0, a1, a2)))
-                                },
-                            ),
-                        }
-                    }
-                    Err(()) => self
+            Err(()) => match self.parsers.1.parse(input) {
+                Ok((remaining, a1)) => match self.parsers.0.parse(remaining) {
+                    Ok((remaining, a0)) => self
                         .parsers
                         .2
-                        .parse(input)
-                        .and_then(|(remaining, a2)| {
-                            match self.parsers.0.parse(remaining) {
-                                Ok((remaining, a0)) => self
-                                    .parsers
-                                    .1
-                                    .parse(remaining)
-                                    .map(|(remaining, a1)| (remaining, (a0, a1, a2))),
-                                Err(()) => self.parsers.1.parse(remaining).and_then(
-                                    |(remaining, a1)| {
-                                        self.parsers
-                                            .0
-                                            .parse(remaining)
-                                            .map(|(remaining, a0)| (remaining, (a0, a1, a2)))
-                                    },
-                                ),
-                            }
+                        .parse(remaining)
+                        .map(|(remaining, a2)| (remaining, (a0, a1, a2))),
+                    Err(()) => self.parsers.2.parse(remaining).and_then(|(remaining, a2)| {
+                        self.parsers
+                            .0
+                            .parse(remaining)
+                            .map(|(remaining, a0)| (remaining, (a0, a1, a2)))
+                    }),
+                },
+                Err(()) => self.parsers.2.parse(input).and_then(|(remaining, a2)| {
+                    match self.parsers.0.parse(remaining) {
+                        Ok((remaining, a0)) => self
+                            .parsers
+                            .1
+                            .parse(remaining)
+                            .map(|(remaining, a1)| (remaining, (a0, a1, a2))),
+                        Err(()) => self.parsers.1.parse(remaining).and_then(|(remaining, a1)| {
+                            self.parsers
+                                .0
+                                .parse(remaining)
+                                .map(|(remaining, a0)| (remaining, (a0, a1, a2)))
                         }),
-                }
-            }
+                    }
+                }),
+            },
         }
     }
 }
