@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::num::{NonZeroI32, NonZeroU32};
 
 /// Трейт, чтобы **реализовывать** и **требовать** метод 'распарсь и покажи,
 /// что распарсить осталось'
@@ -16,7 +16,7 @@ trait Parsable: Sized {
 mod stdp {
     // parsers for std types
     use super::Parser;
-    use std::num::NonZeroU32;
+    use std::num::{NonZeroI32, NonZeroU32};
 
     /// Беззнаковые числа
     #[derive(Debug)]
@@ -47,7 +47,7 @@ mod stdp {
     #[derive(Debug)]
     pub struct I32;
     impl Parser for I32 {
-        type Dest = i32;
+        type Dest = NonZeroI32;
         fn parse<'a>(&self, input: &'a str) -> Result<(&'a str, Self::Dest), ()> {
             let end_idx = input
                 .char_indices()
@@ -55,9 +55,7 @@ mod stdp {
                 .find_map(|(idx, c)| (!c.is_ascii_digit()).then_some(idx))
                 .unwrap_or(input.len());
             let value = input[..end_idx].parse().map_err(|_| ())?;
-            if value == 0 {
-                return Err(()); // в наших логах нет нулей, ноль в операции - фикция
-            }
+
             Ok((&input[end_idx..], value))
         }
     }
@@ -940,8 +938,6 @@ pub fn just_parse<'a, T: Parsable>(input: &'a str) -> Result<(&'a str, T), ()> {
     T::parser().parse(input)
 }
 
-
-
 /// Все виды логов
 #[derive(Debug, Clone, PartialEq)]
 pub enum LogKind {
@@ -1448,10 +1444,19 @@ mod test {
 
     #[test]
     fn test_i32() {
-        assert_eq!(stdp::I32.parse("411".into()), Ok(("".into(), 411)));
-        assert_eq!(stdp::I32.parse("411ab".into()), Ok(("ab".into(), 411)));
+        assert_eq!(
+            stdp::I32.parse("411".into()),
+            Ok(("".into(), NonZeroI32::new(411).unwrap()))
+        );
+        assert_eq!(
+            stdp::I32.parse("411ab".into()),
+            Ok(("ab".into(), NonZeroI32::new(411).unwrap()))
+        );
         assert_eq!(stdp::I32.parse("".into()), Err(()));
-        assert_eq!(stdp::I32.parse("-3".into()), Ok(("".into(), -3)));
+        assert_eq!(
+            stdp::I32.parse("-3".into()),
+            Ok(("".into(), NonZeroI32::new(-3).unwrap()))
+        );
         assert_eq!(stdp::I32.parse("0x03".into()), Err(()));
         assert_eq!(stdp::I32.parse("-".into()), Err(()));
     }
@@ -1710,7 +1715,7 @@ mod test {
                 "".into(),
                 LogKind::App(AppLogKind::Journal(AppLogJournalKind::CreateUser {
                     user_id: "Steeve".into(),
-                    authorized_capital:  NonZeroU32::new(10_000).unwrap()
+                    authorized_capital: NonZeroU32::new(10_000).unwrap()
                 }))
             ))
         );
