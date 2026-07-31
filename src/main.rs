@@ -57,7 +57,7 @@ fn main() {
     println!("demo-parsed: {:?}", announcements);
 
     let args = std::env::args().collect::<Vec<_>>();
-    let filename = args[1].clone();
+    let filename = &args[1];
     println!(
         "Trying opening file '{}' from directory '{}'",
         filename,
