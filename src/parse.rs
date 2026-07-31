@@ -1439,12 +1439,10 @@ impl LogLineParser {
             .parse(input)
     }
 }
-// подсказка: singleton, без которого можно обойтись
-// парсеры не страшно вытащить в pub
-/// Единожды собранный парсер логов
-pub static LOG_LINE_PARSER: LogLineParser = LogLineParser {
-    parser: std::sync::OnceLock::new(),
-};
+
+pub fn parse_log_line(input: &str) -> Result<(&str, LogLine), ()> {
+    LogLine::parser().parse(input)
+}
 
 #[cfg(test)]
 mod test {
