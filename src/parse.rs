@@ -4,9 +4,6 @@ use std::num::NonZeroU32;
 /// что распарсить осталось'
 trait Parser {
     type Dest;
-    // подсказка: здесь можно переделать
-    // на `fn parse<'a>(&self,input:&'a str)->Result<(&'a str, Self::Dest)>`
-    // (возможно, самое трудоёмкое; в своих проектах проще сразу не допускать)
     fn parse<'a>(&self, input: &'a str) -> Result<(&'a str, Self::Dest), ()>;
 }
 /// Вспомогательный трейт, чтобы писать собственный десериализатор
@@ -943,31 +940,7 @@ pub fn just_parse<'a, T: Parsable>(input: &'a str) -> Result<(&'a str, T), ()> {
     T::parser().parse(input)
 }
 
-// /// Обёртка для парсинга [AssetDsc]
-// pub fn just_parse_asset_dsc<'a>(input: &'a str) -> Result<(&'a str, AssetDsc), ()> {
-//     <AssetDsc as Parsable>::parser().parse(input)
-// }
 
-// /// Обёртка для парсинга [Backet]
-// pub fn just_parse_backet<'a>(input: &'a str) -> Result<(&'a str, Backet), ()> {
-//     <Backet as Parsable>::parser().parse(input)
-// }
-/// Обёртка для парсинга [UserCash]
-// pub fn just_user_cash<'a>(input: &'a str) -> Result<(&'a str, UserCash), ()> {
-//     <UserCash as Parsable>::parser().parse(input)
-// }
-/// Обёртка для парсинга [UserBacket]
-// pub fn just_user_backet<'a>(input: &'a str) -> Result<(&'a str, UserBacket), ()> {
-//     <UserBacket as Parsable>::parser().parse(input)
-// }
-/// Обёртка для парсинга [UserBackets]
-// pub fn just_user_backets<'a>(input: &'a str) -> Result<(&'a str, UserBackets), ()> {
-//     <UserBackets as Parsable>::parser().parse(input)
-// }
-/// Обёртка для парсинга [Announcements]
-// pub fn just_parse_anouncements<'a>(input: &'a str) -> Result<(&'a str, Announcements), ()> {
-//     <Announcements as Parsable>::parser().parse(input)
-// }
 
 /// Все виды логов
 #[derive(Debug, Clone, PartialEq)]
@@ -1353,7 +1326,7 @@ impl Parsable for AppLogJournalKind {
                 ),
                 map(
                     preceded(strip_whitespace(tag("WithdrawCash")), UserCash::parser()),
-                    |user_cash| AppLogJournalKind::DepositCash(user_cash),
+                    |user_cash| AppLogJournalKind::WithdrawCash(user_cash),
                 ),
                 map(
                     preceded(strip_whitespace(tag("BuyAsset")), UserBacket::parser()),
