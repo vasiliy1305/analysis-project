@@ -66,17 +66,9 @@ where
     let mut collected = Vec::new();
     // подсказка: можно обойтись итераторами
     for log in logs {
-        if request_ids.is_empty() || {
-            let mut request_id_found = false;
-            for request_id in &request_ids {
-                if *request_id == log.request_id {
-                    request_id_found = true;
-                    break;
-                }
-            }
-            request_id_found
-        }
-        // подсказка: лучше match
+        if request_ids.is_empty()
+            || request_ids.iter().any(|request_id| *request_id == log.request_id)
+            
         && match mode {
             ReadMode::All => true,
             ReadMode::Errors =>          {       matches!(
