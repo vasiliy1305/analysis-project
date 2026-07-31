@@ -65,7 +65,7 @@ fn main() {
     );
     let file = std::fs::File::open(filename).unwrap();
 
-    let logs = analysis::read_log(file, analysis::READ_MODE_ALL, vec![]);
+    let logs = analysis::read_log(file, analysis::ReadMode::All, vec![]);
     println!("got logs:");
     logs.iter().for_each(|parsed| println!("  {:?}", parsed));
 }

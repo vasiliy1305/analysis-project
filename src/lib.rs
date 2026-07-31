@@ -3,16 +3,12 @@ use parse::*;
 
 use std::io::Read;
 
-// подсказка: лучше использовать enum и match
-/// Режим чтения из логов всего подряд
-pub const READ_MODE_ALL: u8 = 0;
-/// Режим чтения из логов только ошибок
-pub const READ_MODE_ERRORS: u8 = 1;
-/// Режим чтения из логов только операций, касающихся деген
-pub const READ_MODE_EXCHANGES: u8 = 2;
-
-
-
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadMode {
+    All,
+    Errors,
+    Exchanges,
+}
 
 fn is_not_empty_line(line_result: &Result<String, std::io::Error>) -> bool {
     match line_result {
@@ -62,7 +58,7 @@ where
 
 // подсказка: RefCell вообще не нужен
 /// Принимает поток байт, отдаёт отфильтрованные и распарсенные логи
-pub fn read_log<R>(input: R, mode: u8, request_ids: Vec<u32>) -> Vec<LogLine>
+pub fn read_log<R>(input: R, mode: ReadMode, request_ids: Vec<u32>) -> Vec<LogLine>
 where
     R: Read,
 {
@@ -81,19 +77,15 @@ where
             request_id_found
         }
         // подсказка: лучше match
-        && if mode == READ_MODE_ALL {
-                true
-            }
-            else if mode == READ_MODE_ERRORS {
-                matches!(
+        && match mode {
+            ReadMode::All => true,
+            ReadMode::Errors =>          {       matches!(
                     &log.kind,
                     LogKind::System(
                         SystemLogKind::Error(_)) | LogKind::App(AppLogKind::Error(_)
                     )
-                )
-            }
-            else if mode == READ_MODE_EXCHANGES {
-                matches!(
+                )},
+            ReadMode::Exchanges => {                matches!(
                     &log.kind,
                     LogKind::App(AppLogKind::Journal(
                         AppLogJournalKind::BuyAsset(_)
@@ -103,13 +95,8 @@ where
                         | AppLogJournalKind::DepositCash(_)
                         | AppLogJournalKind::WithdrawCash(_)
                     ))
-                )
-            }
-            else {
-                // подсказка: паниковать в библиотечном коде - нехорошо
-                panic!("unknown mode {}", mode)
-            }
-        {
+                )},
+        } {
             collected.push(log);
         }
     }
@@ -188,9 +175,9 @@ App::Journal BuyAsset UserBacket{"user_id":"Alice","backet":Backet{"asset_id":"m
 
     #[test]
     fn test_all() {
-        assert_eq!(read_log(SOURCE1.as_bytes(), READ_MODE_ALL, vec![]).len(), 1);
+        assert_eq!(read_log(SOURCE1.as_bytes(), ReadMode::All, vec![]).len(), 1);
 
-        let all_parsed = read_log(SOURCE.as_bytes(), READ_MODE_ALL, vec![]);
+        let all_parsed = read_log(SOURCE.as_bytes(), ReadMode::All, vec![]);
         println!("all parsed:");
         all_parsed
             .iter()
