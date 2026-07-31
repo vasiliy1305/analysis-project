@@ -62,37 +62,37 @@ pub fn read_log<R>(input: R, mode: ReadMode, request_ids: Vec<u32>) -> Vec<LogLi
 where
     R: Read,
 {
-    let logs = LogIterator::new(input);
-    let mut collected = Vec::new();
-    // подсказка: можно обойтись итераторами
-    for log in logs {
-        if request_ids.is_empty()
-            || request_ids.iter().any(|request_id| *request_id == log.request_id)
-            
-        && match mode {
-            ReadMode::All => true,
-            ReadMode::Errors =>          {       matches!(
-                    &log.kind,
-                    LogKind::System(
-                        SystemLogKind::Error(_)) | LogKind::App(AppLogKind::Error(_)
-                    )
-                )},
-            ReadMode::Exchanges => {                matches!(
-                    &log.kind,
-                    LogKind::App(AppLogKind::Journal(
-                        AppLogJournalKind::BuyAsset(_)
-                        | AppLogJournalKind::SellAsset(_)
-                        | AppLogJournalKind::CreateUser{..}
-                        | AppLogJournalKind::RegisterAsset{..}
-                        | AppLogJournalKind::DepositCash(_)
-                        | AppLogJournalKind::WithdrawCash(_)
-                    ))
-                )},
-        } {
-            collected.push(log);
-        }
-    }
-    collected
+    LogIterator::new(input)
+        .filter(|log| {
+            request_ids.is_empty()
+                || request_ids
+                    .iter()
+                    .any(|request_id| *request_id == log.request_id)
+                    && match mode {
+                        ReadMode::All => true,
+                        ReadMode::Errors => {
+                            matches!(
+                                &log.kind,
+                                LogKind::System(SystemLogKind::Error(_))
+                                    | LogKind::App(AppLogKind::Error(_))
+                            )
+                        }
+                        ReadMode::Exchanges => {
+                            matches!(
+                                &log.kind,
+                                LogKind::App(AppLogKind::Journal(
+                                    AppLogJournalKind::BuyAsset(_)
+                                        | AppLogJournalKind::SellAsset(_)
+                                        | AppLogJournalKind::CreateUser { .. }
+                                        | AppLogJournalKind::RegisterAsset { .. }
+                                        | AppLogJournalKind::DepositCash(_)
+                                        | AppLogJournalKind::WithdrawCash(_)
+                                ))
+                            )
+                        }
+                    }
+        })
+        .collect()
 }
 
 #[cfg(test)]
