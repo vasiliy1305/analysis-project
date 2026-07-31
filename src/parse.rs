@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 /// Трейт, чтобы **реализовывать** и **требовать** метод 'распарсь и покажи,
 /// что распарсить осталось'
 trait Parser {
@@ -23,7 +25,7 @@ mod stdp {
     #[derive(Debug)]
     pub struct U32;
     impl Parser for U32 {
-        type Dest = u32;
+        type Dest = NonZeroU32;
         fn parse<'a>(&self, input: &'a str) -> Result<(&'a str, Self::Dest), ()> {
             let (remaining, is_hex) = input
                 .strip_prefix("0x")
@@ -41,7 +43,7 @@ mod stdp {
 
             let value = NonZeroU32::new(value).ok_or(())?;
 
-            Ok((&remaining[end_idx..], value.get()))
+            Ok((&remaining[end_idx..], value))
         }
     }
     /// Знаковые числа
@@ -798,7 +800,7 @@ impl Parsable for AssetDsc {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Backet {
     pub asset_id: String,
-    pub count: u32,
+    pub count: NonZeroU32,
 }
 impl Parsable for Backet {
     type Parser = Map<
@@ -807,7 +809,7 @@ impl Parsable for Backet {
             Permutation<(KeyValue<Unquote>, KeyValue<stdp::U32>)>,
             StripWhitespace<Tag>,
         >,
-        fn((String, u32)) -> Self,
+        fn((String, NonZeroU32)) -> Self,
     >;
     fn parser() -> Self::Parser {
         map(
@@ -827,7 +829,7 @@ impl Parsable for Backet {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserCash {
     pub user_id: String,
-    pub count: u32,
+    pub count: NonZeroU32,
 }
 impl Parsable for UserCash {
     type Parser = Map<
@@ -836,7 +838,7 @@ impl Parsable for UserCash {
             Permutation<(KeyValue<Unquote>, KeyValue<stdp::U32>)>,
             StripWhitespace<Tag>,
         >,
-        fn((String, u32)) -> Self,
+        fn((String, NonZeroU32)) -> Self,
     >;
     fn parser() -> Self::Parser {
         map(
@@ -1018,7 +1020,7 @@ pub enum AppLogTraceKind {
 pub enum AppLogJournalKind {
     CreateUser {
         user_id: String,
-        authorized_capital: u32,
+        authorized_capital: NonZeroU32,
     },
     DeleteUser {
         user_id: String,
@@ -1026,7 +1028,7 @@ pub enum AppLogJournalKind {
     RegisterAsset {
         asset_id: String,
         user_id: String,
-        liquidity: u32,
+        liquidity: NonZeroU32,
     },
     UnregisterAsset {
         asset_id: String,
@@ -1242,7 +1244,7 @@ impl Parsable for AppLogJournalKind {
                     StripWhitespace<Tag>,
                     Delimited<Tag, Permutation<(KeyValue<Unquote>, KeyValue<stdp::U32>)>, Tag>,
                 >,
-                fn((String, u32)) -> AppLogJournalKind,
+                fn((String, NonZeroU32)) -> AppLogJournalKind,
             >,
             Map<
                 Preceded<StripWhitespace<Tag>, Delimited<Tag, KeyValue<Unquote>, Tag>>,
@@ -1257,7 +1259,7 @@ impl Parsable for AppLogJournalKind {
                         Tag,
                     >,
                 >,
-                fn((String, String, u32)) -> AppLogJournalKind,
+                fn((String, String, NonZeroU32)) -> AppLogJournalKind,
             >,
             Map<
                 Preceded<
@@ -1407,7 +1409,7 @@ impl Parsable for LogKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LogLine {
     pub kind: LogKind,
-    pub request_id: u32,
+    pub request_id: NonZeroU32,
 }
 impl Parsable for LogLine {
     type Parser = Map<
@@ -1415,7 +1417,7 @@ impl Parsable for LogLine {
             <LogKind as Parsable>::Parser,
             StripWhitespace<Preceded<Tag, stdp::U32>>,
         )>,
-        fn((LogKind, u32)) -> Self,
+        fn((LogKind, NonZeroU32)) -> Self,
     >;
     fn parser() -> Self::Parser {
         map(
@@ -1450,12 +1452,24 @@ mod test {
 
     #[test]
     fn test_u32() {
-        assert_eq!(stdp::U32.parse("411".into()), Ok(("".into(), 411)));
-        assert_eq!(stdp::U32.parse("411ab".into()), Ok(("ab".into(), 411)));
+        assert_eq!(
+            stdp::U32.parse("411".into()),
+            Ok(("".into(), NonZeroU32::new(411).unwrap()))
+        );
+        assert_eq!(
+            stdp::U32.parse("411ab".into()),
+            Ok(("ab".into(), NonZeroU32::new(411).unwrap()))
+        );
         assert_eq!(stdp::U32.parse("".into()), Err(()));
         assert_eq!(stdp::U32.parse("-3".into()), Err(()));
-        assert_eq!(stdp::U32.parse("0x03".into()), Ok(("".into(), 0x3)));
-        assert_eq!(stdp::U32.parse("0x03abg".into()), Ok(("g".into(), 0x3ab)));
+        assert_eq!(
+            stdp::U32.parse("0x03".into()),
+            Ok(("".into(), NonZeroU32::new(0x3).unwrap()))
+        );
+        assert_eq!(
+            stdp::U32.parse("0x03abg".into()),
+            Ok(("g".into(), NonZeroU32::new(0x3ab).unwrap()))
+        );
         assert_eq!(stdp::U32.parse("0x".into()), Err(()));
     }
 
@@ -1531,7 +1545,7 @@ mod test {
         );
         assert_eq!(
             strip_whitespace(stdp::U32).parse(" 42 answer".into()),
-            Ok(("answer".into(), 42))
+            Ok(("answer".into(), NonZeroU32::new(42).unwrap()))
         );
     }
 
@@ -1539,11 +1553,11 @@ mod test {
     fn test_delimited() {
         assert_eq!(
             delimited(tag("["), stdp::U32, tag("]")).parse("[0x32]".into()),
-            Ok(("".into(), 0x32))
+            Ok(("".into(), NonZeroU32::new(0x32).unwrap()))
         );
         assert_eq!(
             delimited(tag("[".into()), stdp::U32, tag("]".into())).parse("[0x32] nice".into()),
-            Ok((" nice".into(), 0x32))
+            Ok((" nice".into(), NonZeroU32::new(0x32).unwrap()))
         );
         assert_eq!(
             delimited(tag("[".into()), stdp::U32, tag("]")).parse("0x32]".into()),
@@ -1559,7 +1573,7 @@ mod test {
     fn test_key_value() {
         assert_eq!(
             key_value("key", stdp::U32).parse(r#""key":32,"#.into()),
-            Ok(("".into(), 32))
+            Ok(("".into(), NonZeroU32::new(32).unwrap()))
         );
         assert_eq!(
             key_value("key", stdp::U32).parse(r#"key:32,"#.into()),
@@ -1571,7 +1585,7 @@ mod test {
         );
         assert_eq!(
             key_value("key", stdp::U32).parse(r#" "key" : 32 , nice"#.into()),
-            Ok(("nice".into(), 32))
+            Ok(("nice".into(), NonZeroU32::new(32).unwrap()))
         );
     }
 
@@ -1579,11 +1593,27 @@ mod test {
     fn test_list() {
         assert_eq!(
             list(stdp::U32).parse("[1,2,3,4,]".into()),
-            Ok(("".into(), vec![1, 2, 3, 4,]))
+            Ok((
+                "".into(),
+                vec![
+                    NonZeroU32::new(1).unwrap(),
+                    NonZeroU32::new(2).unwrap(),
+                    NonZeroU32::new(3).unwrap(),
+                    NonZeroU32::new(4).unwrap()
+                ]
+            ))
         );
         assert_eq!(
             list(stdp::U32).parse(" [ 1 , 2 , 3 , 4 , ] nice".into()),
-            Ok(("nice".into(), vec![1, 2, 3, 4,]))
+            Ok((
+                "nice".into(),
+                vec![
+                    NonZeroU32::new(1).unwrap(),
+                    NonZeroU32::new(2).unwrap(),
+                    NonZeroU32::new(3).unwrap(),
+                    NonZeroU32::new(4).unwrap()
+                ]
+            ))
         );
         assert_eq!(list(stdp::U32).parse("1,2,3,4,".into()), Err(()));
         assert_eq!(list(stdp::U32).parse("[]".into()), Ok(("".into(), vec![])));
@@ -1661,7 +1691,7 @@ mod test {
                 "".into(),
                 Backet {
                     asset_id: "usd".into(),
-                    count: 42
+                    count: NonZeroU32::new(42).unwrap(),
                 }
             ))
         );
@@ -1671,7 +1701,7 @@ mod test {
                 "".into(),
                 Backet {
                     asset_id: "usd".into(),
-                    count: 42
+                    count: NonZeroU32::new(42).unwrap(),
                 }
             ))
         );
@@ -1707,7 +1737,7 @@ mod test {
                 "".into(),
                 LogKind::App(AppLogKind::Journal(AppLogJournalKind::CreateUser {
                     user_id: "Steeve".into(),
-                    authorized_capital: 10_000
+                    authorized_capital:  NonZeroU32::new(10_000).unwrap()
                 }))
             ))
         );
@@ -1720,7 +1750,7 @@ mod test {
                 }))
             ))
         );
-        assert_eq!(LogKind::parser().parse(r#"App::Journal RegisterAsset {"asset_id": "bayc", "liquidity": 100000000, "user_id": "Steeve",}"#.into()), Ok(("".into(), LogKind::App(AppLogKind::Journal(AppLogJournalKind::RegisterAsset{asset_id: "bayc".into(), user_id: "Steeve".into(), liquidity: 100_000_000})))));
+        assert_eq!(LogKind::parser().parse(r#"App::Journal RegisterAsset {"asset_id": "bayc", "liquidity": 100000000, "user_id": "Steeve",}"#.into()), Ok(("".into(), LogKind::App(AppLogKind::Journal(AppLogJournalKind::RegisterAsset{asset_id: "bayc".into(), user_id: "Steeve".into(), liquidity:  NonZeroU32::new(100_000_000).unwrap()})))));
         assert_eq!(
             LogKind::parser().parse(
                 r#"App::Journal DepositCash UserCash{"user_id": "Steeve", "count": 10,}"#.into()
@@ -1730,11 +1760,11 @@ mod test {
                 LogKind::App(AppLogKind::Journal(AppLogJournalKind::DepositCash(
                     UserCash {
                         user_id: "Steeve".into(),
-                        count: 10
+                        count: NonZeroU32::new(10).unwrap(),
                     }
                 )))
             ))
         );
-        assert_eq!(LogKind::parser().parse(r#"App::Journal BuyAsset UserBacket{"user_id": "Steeve", "backet": Backet{"asset_id":"bayc","count":1,},}"#.into()), Ok(("".into(), LogKind::App(AppLogKind::Journal(AppLogJournalKind::BuyAsset(UserBacket{user_id: "Steeve".into(), backet: Backet{asset_id: "bayc".into(),count:1}}))))));
+        assert_eq!(LogKind::parser().parse(r#"App::Journal BuyAsset UserBacket{"user_id": "Steeve", "backet": Backet{"asset_id":"bayc","count":1,},}"#.into()), Ok(("".into(), LogKind::App(AppLogKind::Journal(AppLogJournalKind::BuyAsset(UserBacket{user_id: "Steeve".into(), backet: Backet{asset_id: "bayc".into(),count:NonZeroU32::new(1).unwrap()}}))))));
     }
 }

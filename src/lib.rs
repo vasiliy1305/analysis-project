@@ -3,6 +3,8 @@ use parse::*;
 
 use std::io::Read;
 
+use std::num::NonZeroU32;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReadMode {
     All,
@@ -58,7 +60,7 @@ where
 
 // подсказка: RefCell вообще не нужен
 /// Принимает поток байт, отдаёт отфильтрованные и распарсенные логи
-pub fn read_log<R>(input: R, mode: ReadMode, request_ids: Vec<u32>) -> Vec<LogLine>
+pub fn read_log<R>(input: R, mode: ReadMode, request_ids: Vec<NonZeroU32>) -> Vec<LogLine>
 where
     R: Read,
 {
